@@ -1,3 +1,5 @@
+import {createId} from './id.js';
+
 const DATABASE_NAME = 'vokabelhero';
 const DATABASE_VERSION = 2;
 const STORES = ['units', 'attempts', 'rewards', 'settings', 'achievements'];
@@ -90,7 +92,7 @@ export async function seedDatabase(units, rewards) {
 export async function saveAttempt({ unitId, level, word, correct, firstTry, response = '', sessionId = null, durationMs = 0 }) {
   const now = new Date().toISOString();
   return put('attempts', {
-    id: crypto.randomUUID(), unitId, level, word, correct, firstTry, response, sessionId, durationMs,
+    id: createId(), unitId, level, word, correct, firstTry, response, sessionId, durationMs,
     createdAt: now, updatedAt: now
   });
 }

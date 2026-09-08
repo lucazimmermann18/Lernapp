@@ -6,7 +6,7 @@ function ResultStars({count}){
  return <div className="result-stars" aria-label={`${count} von 3 Sternen`}>{[0,1,2].map(index=><Star key={index} className={index<count?'earned':''} fill={index<count?'#ffc43d':'transparent'}/>)}</div>;
 }
 
-export function StageResult({unit,level,levelInfo,results,maxStreak=0,onUnit,onRepeat,onNext}){
+export function StageResult({unit,level,levelInfo,results,maxStreak=0,childName,onUnit,onRepeat,onNext}){
  const assessment=scoreStage(results);
  const hits=results.filter(result=>result.firstTry).length;
  const difficult=results.filter(result=>!result.firstTry);
@@ -17,8 +17,8 @@ export function StageResult({unit,level,levelInfo,results,maxStreak=0,onUnit,onR
   <section className="result-card">
    <div className="result-trophy">{assessment.passed?<Trophy/>:'💪'}</div>
    <div className="result-kicker">STUFE {level+1} · {levelInfo[1].toUpperCase()}</div>
-   <h1>{assessment.passed?'Großartig gemacht!':'Das wird schon!'}</h1>
-   <p>{assessment.passed?'Du hast die Stufe geschafft und kannst weitermachen.':'Übe die schwierigen Wörter noch einmal – du schaffst das!'}</p>
+   <h1>{assessment.passed?`${childName}, großartig gemacht!`:`${childName}, das wird schon!`}</h1>
+   <p>{assessment.passed?`Du hast die Stufe geschafft, ${childName}!`:`Übe die schwierigen Wörter noch einmal, ${childName} – du schaffst das!`}</p>
    <ResultStars count={assessment.stars}/>
    <strong className="result-score">{assessment.score}<small>%</small></strong>
    <span className="pass-note">{assessment.passed?'Bestanden – mindestens 70 % erreicht':'Noch nicht bestanden – 70 % werden benötigt'}</span>

@@ -81,3 +81,11 @@ test('streak grows only for consecutive correct answers and resets on an error',
  assert.equal(nextStreak(streak,false),0);
  assert.equal(nextStreak(0,true),1);
 });
+
+test('normalizes and loads the personalized child profile safely',async()=>{
+ const {DEFAULT_CHILD_NAME,childNameFromSettings,greetingForChild,normalizeChildName}=await import('../src/profile.js');
+ assert.equal(normalizeChildName('  Mia   Sophie  '),'Mia Sophie');
+ assert.equal(normalizeChildName(''),DEFAULT_CHILD_NAME);
+ assert.equal(childNameFromSettings([{id:'child-profile',name:'Lina'}]),'Lina');
+ assert.equal(greetingForChild('Noah',new Date('2026-09-07T08:00:00')),'Guten Morgen, Noah!');
+});
