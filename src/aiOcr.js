@@ -1,4 +1,5 @@
 import {getAccessToken,getCloudRequestHeaders} from './cloud.js';
+import {stripPronunciation} from './ocr.js';
 
 const env=import.meta.env||{};
 const supabaseUrl=(env.VITE_SUPABASE_URL||'https://lmcaduueyjpgjipoodju.supabase.co').replace(/\/$/,'');
@@ -6,7 +7,7 @@ const supabaseUrl=(env.VITE_SUPABASE_URL||'https://lmcaduueyjpgjipoodju.supabase
 export function parseAIResponse(value){
  const data=typeof value==='string'?JSON.parse(value.replace(/^```json\s*|\s*```$/g,'')):value;
  if(!Array.isArray(data?.pairs))throw new Error('Die KI-Antwort enthält keine Vokabelpaare.');
- return data.pairs.map(pair=>[String(pair.de||'').trim(),String(pair.en||'').trim()]).filter(pair=>pair[0]&&pair[1]).slice(0,30);
+ return data.pairs.map(pair=>[String(pair.de||'').trim(),stripPronunciation(pair.en)]).filter(pair=>pair[0]&&pair[1]).slice(0,30);
 }
 
 const toBase64=file=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result.split(',')[1]);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(file)});

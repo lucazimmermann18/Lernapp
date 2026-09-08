@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {advanceMonster,buildErrorMonsters,meaningChoices,monsterMood} from '../src/monster.js';
+
+const units=[{id:'animals',name:'Animals',pairs:[['Hund','dog'],['Katze','cat'],['Pferd','horse']]}];
+const attempts=[{unitId:'animals',word:'dog',correct:false,createdAt:'2026-09-01T10:00:00Z'},{unitId:'animals',word:'dog',correct:false,createdAt:'2026-09-02T10:00:00Z'}];
+test('a monster appears after two errors and is linked to its translation',()=>{const monsters=buildErrorMonsters(attempts,units);assert.equal(monsters.length,1);assert.equal(monsters[0].de,'Hund');assert.equal(monsters[0].wrong,2);});
+test('three different correct challenges defeat the monster',()=>{let state={...buildErrorMonsters(attempts,units)[0],steps:[]};state={...state,...advanceMonster(state,'meaning',new Date('2026-09-03'))};state={...state,...advanceMonster(state,'spelling',new Date('2026-09-03'))};state={...state,...advanceMonster(state,'sentence',new Date('2026-09-03'))};assert.ok(state.defeatedAt);assert.equal(monsterMood(state.steps.length),'✨');});
+test('meaning choices always contain the correct meaning',()=>{const monster=buildErrorMonsters(attempts,units)[0];assert.ok(meaningChoices(monster,units,()=>.9).includes('Hund'));});
+test('a newer error brings a defeated monster back',()=>{const defeated=[{id:'animals:dog',steps:['meaning','spelling','sentence'],defeatedAt:'2026-09-02T11:00:00Z'}];assert.equal(buildErrorMonsters(attempts,units,defeated).length,0);const later=[...attempts,{unitId:'animals',word:'dog',correct:false,createdAt:'2026-09-04T10:00:00Z'}];assert.equal(buildErrorMonsters(later,units,defeated).length,1);});
+test('monster progress is included in owner-scoped local and cloud sync',async()=>{const {readFile}=await import('node:fs/promises'),storage=await readFile(new URL('../src/storage.js',import.meta.url),'utf8'),cloud=await readFile(new URL('../src/cloud.js',import.meta.url),'utf8'),migration=await readFile(new URL('../supabase/migrations/008_monster_progress.sql',import.meta.url),'utf8');assert.match(storage,/monsterProgress/);assert.match(cloud,/monsterProgress/);assert.match(migration,/enable row level security/i);assert.match(migration,/auth\.uid\(\)/);assert.match(migration,/sync_app_data/);});

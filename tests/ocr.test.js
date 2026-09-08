@@ -69,3 +69,12 @@ test('separates parts of speech, irregular forms and notes from learning words',
  assert.equal(normalizeVocabularyPair(['Hallo','Hello. interj'],true).en,'Hello');
  assert.deepEqual(splitVocabularyEntry('spell, spelt, spelt/spelled, spelled @sd v'),{word:'spell',partOfSpeech:'v',forms:['spelt','spelt/spelled','spelled'],notes:'',original:'spell, spelt, spelt/spelled, spelled @sd v'});
 });
+
+test('removes pronunciation from local OCR vocabulary before learning',async()=>{
+ const {normalizeVocabularyPair,stripPronunciation}=await import('../src/ocr.js');
+ assert.equal(stripPronunciation("sister ['sɪstə]"),'sister');
+ assert.equal(stripPronunciation('an [ən]'),'an');
+ assert.equal(stripPronunciation('word /wɜːd/'),'word');
+ assert.equal(stripPronunciation('first/last name'),'first/last name');
+ assert.equal(normalizeVocabularyPair(['Schwester',"sister ['sɪstə]"],false).en,'sister');
+});

@@ -4,7 +4,7 @@ const env = import.meta.env || {};
 const url = (env.VITE_SUPABASE_URL || 'https://lmcaduueyjpgjipoodju.supabase.co').replace(/\/$/, '');
 const anonKey = env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtY2FkdXVleWpwZ2ppcG9vZGp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3OTQ0NzgsImV4cCI6MjEwNDM3MDQ3OH0.scspT4gEaRJRBwmIUQXN62j5XsNpL4zLNQsiv-u3Hbs';
 const SESSION_KEY = 'vokabelhero-supabase-session';
-const TABLES = ['units','attempts','rewards','settings','achievements','reviewProgress','masteryTests','stories','battleResults'];
+const TABLES = ['units','attempts','rewards','settings','achievements','reviewProgress','masteryTests','stories','battleResults','monsterProgress','runnerResults'];
 const listeners = new Set();
 let syncStatus = {state:'idle',message:'Lokal gespeichert',lastSyncedAt:null};
 
