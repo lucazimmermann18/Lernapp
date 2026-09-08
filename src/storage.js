@@ -1,8 +1,8 @@
 import {createId} from './id.js';
 
 const DATABASE_NAME = 'vokabelhero';
-const DATABASE_VERSION = 2;
-const STORES = ['units', 'attempts', 'rewards', 'settings', 'achievements'];
+const DATABASE_VERSION = 6;
+const STORES = ['units', 'attempts', 'rewards', 'settings', 'achievements', 'reviewProgress', 'masteryTests', 'stories', 'battleResults'];
 
 function requestAsPromise(request) {
   return new Promise((resolve, reject) => {
@@ -89,11 +89,11 @@ export async function seedDatabase(units, rewards) {
   ));
 }
 
-export async function saveAttempt({ unitId, level, word, correct, firstTry, response = '', sessionId = null, durationMs = 0 }) {
+export async function saveAttempt({ unitId, level, word, correct, firstTry, response = '', sessionId = null, durationMs = 0, errorType = null, isReview = false, hintUsed = 0 }) {
   const now = new Date().toISOString();
   return put('attempts', {
     id: createId(), unitId, level, word, correct, firstTry, response, sessionId, durationMs,
-    createdAt: now, updatedAt: now
+    errorType, isReview, hintUsed, createdAt: now, updatedAt: now
   });
 }
 

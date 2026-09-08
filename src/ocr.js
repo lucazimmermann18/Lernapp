@@ -13,7 +13,10 @@ const clean = value => value
 const PARTS_OF_SPEECH = new Set(['v','n','adj','adv','prep','pron','conj','det','interj','pl']);
 
 export function splitVocabularyEntry(value) {
-  let source=clean(value);let partOfSpeech='';let notes='';let forms=[];
+  let source=clean(value)
+    .replace(/\s+(?:USA|UK)\s*$/i,'')
+    .replace(/\s+@[a-z]{1,4}(?=\s|$)/gi,'');
+  let partOfSpeech='';let notes='';let forms=[];
   const partMatch=source.match(/\b(v|n|adj|adv|prep|pron|conj|det|interj|pl)\.?$/i);
   if(partMatch&&PARTS_OF_SPEECH.has(partMatch[1].toLowerCase())){partOfSpeech=partMatch[1].toLowerCase();source=source.slice(0,partMatch.index).trim()}
   const noteMatches=[...source.matchAll(/\(([^)]+)\)/g)];

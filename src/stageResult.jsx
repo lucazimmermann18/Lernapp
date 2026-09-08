@@ -6,7 +6,7 @@ function ResultStars({count}){
  return <div className="result-stars" aria-label={`${count} von 3 Sternen`}>{[0,1,2].map(index=><Star key={index} className={index<count?'earned':''} fill={index<count?'#ffc43d':'transparent'}/>)}</div>;
 }
 
-export function StageResult({unit,level,levelInfo,results,maxStreak=0,childName,onUnit,onRepeat,onNext}){
+export function StageResult({unit,level,levelInfo,results,maxStreak=0,childName,onUnit,onRepeat,onNext,onStory,isMastery=false,timeLimitReached=false,durationMs=0}){
  const assessment=scoreStage(results);
  const hits=results.filter(result=>result.firstTry).length;
  const difficult=results.filter(result=>!result.firstTry);
@@ -16,14 +16,15 @@ export function StageResult({unit,level,levelInfo,results,maxStreak=0,childName,
   <button className="result-back" onClick={onUnit}><ArrowLeft/> Zur Unit</button>
   <section className="result-card">
    <div className="result-trophy">{assessment.passed?<Trophy/>:'💪'}</div>
-   <div className="result-kicker">STUFE {level+1} · {levelInfo[1].toUpperCase()}</div>
-   <h1>{assessment.passed?`${childName}, großartig gemacht!`:`${childName}, das wird schon!`}</h1>
-   <p>{assessment.passed?`Du hast die Stufe geschafft, ${childName}!`:`Übe die schwierigen Wörter noch einmal, ${childName} – du schaffst das!`}</p>
+   <div className="result-kicker">{isMastery?'🏆 MEISTERTEST':`STUFE ${level+1} · ${levelInfo[1].toUpperCase()}`}</div>
+   <h1>{timeLimitReached?`Super gelernt, ${childName}!`:assessment.passed?isMastery?`${childName}, langfristig gemeistert!`:`${childName}, großartig gemacht!`:`${childName}, das wird schon!`}</h1>
+   <p>{timeLimitReached?`Deine Lernzeit ist vorbei. Du hast ${results.length} Wörter in ${Math.max(1,Math.round(durationMs/60000))} Minuten geübt.`:assessment.passed?isMastery?'Du hast die Wörter auch nach der Lernpause sicher beherrscht!':`Du hast die Stufe geschafft, ${childName}!`:`Übe die schwierigen Wörter noch einmal, ${childName} – du schaffst das!`}</p>
    <ResultStars count={assessment.stars}/>
    <strong className="result-score">{assessment.score}<small>%</small></strong>
    <span className="pass-note">{assessment.passed?'Bestanden – mindestens 70 % erreicht':'Noch nicht bestanden – 70 % werden benötigt'}</span>
    <div className="result-facts"><div><b>{hits} / {results.length}</b><span>beim ersten Versuch</span></div><div><b><Flame/> {maxStreak}</b><span>beste Serie</span></div><div><b>{difficult.length}</b><span>Wörter zum Üben</span></div></div>
-   <section className="difficult-result"><h2>{difficult.length?'Diese Wörter festigen':'Alles auf Anhieb gewusst! 🎉'}</h2>{difficult.length>0&&<div>{difficult.map(result=><span key={result.word}><b>{result.word}</b><small>{germanByEnglish.get(result.word)||''}</small></span>)}</div>}</section>
+   <section className="difficult-result"><h2>{difficult.length?'Diese Wörter festigen':'Alles auf Anhieb gewusst! 🎉'}</h2>{difficult.length>0&&<div>{difficult.map((result,index)=><span key={`${result.word}-${index}`}><b>{result.word}</b><small>{germanByEnglish.get(result.word)||''}</small></span>)}</div>}</section>
+   {onStory&&<button className="result-story" onClick={onStory}>📖 Persönliche Lückengeschichte spielen <ChevronRight/></button>}
    <div className="result-actions"><button className="repeat-stage" onClick={onRepeat}><RefreshCw/> Stufe wiederholen</button>{assessment.passed&&onNext?<button className="next-stage" onClick={onNext}>Nächste Stufe <ChevronRight/></button>:<button className="next-stage" onClick={onUnit}>Zur Stufenübersicht <ChevronRight/></button>}</div>
   </section>
  </main>;

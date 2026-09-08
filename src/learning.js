@@ -28,6 +28,7 @@ export function withMissingDates(units, now = new Date()) {
     ...unit,
     stars: [...(unit.stars || []), 0, 0, 0, 0, 0, 0, 0].slice(0, 7),
     done: Math.min(unit.done || 0, 7),
+    words: Array.isArray(unit.pairs) ? unit.pairs.filter(pair => Array.isArray(pair) && String(pair[0] || '').trim() && String(pair[1] || '').trim()).length : (unit.words || 0),
     createdAt: unit.createdAt || new Date(now.getTime() - index * 86400000).toISOString(),
     lastPracticedAt: unit.lastPracticedAt || null
   }));
@@ -108,21 +109,25 @@ export function buildParentAnalytics(attempts, units, now = new Date()) {
     .sort((a,b)=>b.errorRate-a.errorRate||b.total-a.total);
   const correct = answers.filter(answer=>answer.correct);
   const firstTry = correct.filter(answer=>answer.firstTry);
+  const hintsUsed = answers.filter(answer=>Number(answer.hintUsed)>0);
   const dayKeys = [...new Set(answers.map(answer=>answer.createdAt?.slice(0,10)).filter(Boolean))];
   const lastSevenDays = Array.from({length:7},(_,offset)=>{
     const date=new Date(now);date.setDate(date.getDate()-(6-offset));const key=localDateKey(date);
     return {date:key,label:date.toLocaleDateString('de-DE',{weekday:'short'}),answers:answers.filter(a=>a.createdAt?.slice(0,10)===key).length};
   });
+  const errorTypes = answers.filter(answer=>!answer.correct).reduce((result,answer)=>{const type=answer.errorType||'unknown';result[type]=(result[type]||0)+1;return result},{});
   const sessionDurations = new Map();
   for(const answer of answers)if(answer.sessionId)sessionDurations.set(answer.sessionId,(sessionDurations.get(answer.sessionId)||0)+(answer.durationMs||0));
   return {
     totalAnswers:answers.length,
     errorRate:answers.length?Math.round((answers.length-correct.length)/answers.length*100):0,
     firstTryRate:correct.length?Math.round(firstTry.length/correct.length*100):0,
+    hintsUsed:hintsUsed.length,
     learningDays:dayKeys.length,
     lastLearnedAt:answers.map(a=>a.createdAt).filter(Boolean).sort().at(-1)||null,
     averageRoundMinutes:sessionDurations.size?Math.round([...sessionDurations.values()].reduce((a,b)=>a+b,0)/sessionDurations.size/6000)/10:0,
     hardestWords:words.slice(0,8),
+    errorTypes,
     lastSevenDays,
     unitProgress:activeUnits.map(unit=>({id:unit.id,name:unit.name,archived:Boolean(unit.archived),done:unit.done||0,percent:Math.round((unit.done||0)/7*100),lastPracticedAt:unit.lastPracticedAt||null}))
   };
