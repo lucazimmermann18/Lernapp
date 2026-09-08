@@ -20,3 +20,16 @@ test('next stage remains locked when the 70 percent threshold is missed',()=>{
  assert.equal(failed.passed,false);assert.equal(failed.stars,0);
  assert.equal(passed.passed,true);assert.equal(passed.stars,1);
 });
+
+test('result praise is personalized with the child name',()=>{
+ assert.match(source,/childName/);
+ assert.match(source,/großartig gemacht/);
+ assert.match(source,/du schaffst das/);
+});
+
+test('application has a visible recovery screen instead of a blank page',async()=>{
+ const source=await (await import('node:fs/promises')).readFile(new URL('../src/ErrorBoundary.jsx',import.meta.url),'utf8');
+ assert.match(source,/getDerivedStateFromError/);
+ assert.match(source,/App neu laden/);
+ assert.match(source,/Lernstände sind weiterhin gespeichert/);
+});

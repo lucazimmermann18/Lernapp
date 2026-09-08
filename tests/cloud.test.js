@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 const values=new Map();
 global.localStorage={getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)};
-const {cloudConfigured,getCloudUser,signIn,signOut}=await import('../src/cloud.js');
+const {chooseNewestRows,cloudConfigured,getCloudUser,signIn,signOut}=await import('../src/cloud.js');
 
 test('Supabase configuration is available',()=>assert.equal(cloudConfigured,true));
 
@@ -18,4 +18,12 @@ test('sign out removes the parent session',()=>{signOut();assert.equal(getCloudU
 test('invalid credentials show a safe message',async()=>{
  global.fetch=async()=>({ok:false,status:400});
  await assert.rejects(()=>signIn('wrong@example.de','wrong12'),/E-Mail oder Passwort/);
+});
+
+test('compatibility sync selects the newest version of each record',()=>{
+ const local=[{id:'same',data:{name:'local'},updated_at:'2026-09-07T12:00:00Z'},{id:'local-only',data:{},updated_at:'2026-09-07T10:00:00Z'}];
+ const remote=[{id:'same',data:{name:'cloud'},updated_at:'2026-09-07T11:00:00Z'},{id:'remote-only',data:{},updated_at:'2026-09-07T10:00:00Z'}];
+ const result=chooseNewestRows(local,remote);
+ assert.equal(result.find(row=>row.id==='same').data.name,'local');
+ assert.deepEqual(new Set(result.map(row=>row.id)),new Set(['same','local-only','remote-only']));
 });

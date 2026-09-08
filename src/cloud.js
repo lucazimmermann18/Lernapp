@@ -38,6 +38,26 @@ async function session(){
 
 export async function getAccessToken(){ return (await session()).access_token; }
 
+const timestamp = row => new Date(row.updated_at || 0).getTime();
+export function chooseNewestRows(localRows,remoteRows){
+ const rows=new Map(remoteRows.map(row=>[row.id,row]));
+ for(const local of localRows){const remote=rows.get(local.id);if(!remote||timestamp(local)>=timestamp(remote))rows.set(local.id,local)}
+ return [...rows.values()];
+}
+
+async function syncWithoutRpc(auth,payload){
+ const merged={};
+ for(const table of TABLES){
+  const read=await fetch(`${url}/rest/v1/${table}?user_id=eq.${auth.user.id}&select=id,data,updated_at`,{headers:headers(auth.access_token)});
+  if(!read.ok)throw new Error(`Cloud-Tabelle „${table}“ ist nicht verfügbar (${read.status}). Bitte Migration 002 ausführen.`);
+  const remote=await read.json(),local=payload[table]||[],remoteById=new Map(remote.map(row=>[row.id,row]));
+  const changed=local.filter(row=>!remoteById.has(row.id)||timestamp(row)>=timestamp(remoteById.get(row.id))).map(row=>({...row,user_id:auth.user.id}));
+  if(changed.length){const write=await fetch(`${url}/rest/v1/${table}?on_conflict=user_id,id`,{method:'POST',headers:headers(auth.access_token,{Prefer:'resolution=merge-duplicates'}),body:JSON.stringify(changed)});if(!write.ok)throw new Error(`Cloud-Abgleich für „${table}“ ist fehlgeschlagen (${write.status}).`)}
+  merged[table]=chooseNewestRows(local,remote).map(({id,data,updated_at})=>({id,data,updated_at}));
+ }
+ return merged;
+}
+
 export async function syncCloudData(){
  publish({state:'syncing',message:'Wird synchronisiert …'});
  try{
@@ -46,9 +66,11 @@ export async function syncCloudData(){
   const payload={};
   for(const table of TABLES)payload[table]=(backup[table]||[]).map(item=>({id:item.id,data:item,updated_at:item.updatedAt||item.createdAt||'1970-01-01T00:00:00.000Z'}));
   const response=await fetch(`${url}/rest/v1/rpc/sync_app_data`,{method:'POST',headers:headers(auth.access_token),body:JSON.stringify({p_payload:payload})});
-  if(!response.ok)throw new Error(`Cloud-Synchronisierung fehlgeschlagen (${response.status}). Bitte Migration 003 ausführen.`);
-  const merged=await mergeCloudData(await response.json());
-  const time=new Date().toISOString();publish({state:'synced',message:'Alles gespeichert',lastSyncedAt:time});return {...merged,exportedAt:time};
+  if(!response.ok&&response.status!==404)throw new Error(`Cloud-Synchronisierung fehlgeschlagen (${response.status}).`);
+  const compatibilityMode=response.status===404;
+  const cloudData=compatibilityMode?await syncWithoutRpc(auth,payload):await response.json();
+  const merged=await mergeCloudData(cloudData);
+  const time=new Date().toISOString();publish({state:'synced',message:compatibilityMode?'Alles gespeichert · Kompatibilitätsmodus':'Alles gespeichert',lastSyncedAt:time});return {...merged,exportedAt:time,compatibilityMode};
  }catch(error){publish({state:error.message.startsWith('Offline')?'offline':'error',message:error.message});throw error;}
 }
 

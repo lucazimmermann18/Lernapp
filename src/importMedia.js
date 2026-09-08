@@ -1,4 +1,5 @@
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import {createId} from './id.js';
 
 const IMAGE_TYPES=new Set(['image/jpeg','image/png','image/webp']);
 const HEIC_TYPES=new Set(['image/heic','image/heif']);
@@ -35,7 +36,7 @@ export async function prepareImportFiles(files){
   else if(IMAGE_TYPES.has(file.type))assets.push({blob:file,label:file.name,source:'image'});
   else throw new Error(`„${file.name}“ wird nicht unterstützt.`);
  }
- return assets.map(asset=>({...asset,id:crypto.randomUUID(),enabled:true,rotation:0,crop:{top:0,right:0,bottom:0,left:0}}));
+ return assets.map(asset=>({...asset,id:createId(),enabled:true,rotation:0,crop:{top:0,right:0,bottom:0,left:0}}));
 }
 
 export async function transformImportAsset(asset){

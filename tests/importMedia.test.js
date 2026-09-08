@@ -19,3 +19,17 @@ test('media workflow supports HEIC, PDFs, multiple images, crop and rotation',()
  assert.match(workspace,/multiple/);assert.match(workspace,/rotation/);assert.match(workspace,/crop/);
  assert.match(workspace,/Diesen Ausschnitt erneut erkennen/);
 });
+
+test('media IDs work without secure-context randomUUID',async()=>{
+ const idSource=await readFile(new URL('../src/id.js',import.meta.url),'utf8');
+ assert.match(idSource,/getRandomValues/);
+ assert.match(media,/createId\(\)/);
+ assert.doesNotMatch(media,/crypto\.randomUUID/);
+});
+
+test('manual vocabulary editor exposes an explicit functional add action',async()=>{
+ const main=await readFile(new URL('../src/main.jsx',import.meta.url),'utf8');
+ assert.match(main,/const addPair=.*setPairs\(current/);
+ assert.match(main,/Vokabel manuell hinzufügen/);
+ assert.match(main,/pairs\.length} von 30 Wortpaaren/);
+});

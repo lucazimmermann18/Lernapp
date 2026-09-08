@@ -8,6 +8,8 @@ const migration=await readFile(new URL('../supabase/migrations/003_live_sync.sql
 test('cloud synchronization never deletes an entire user table',()=>{
   assert.doesNotMatch(cloudSource,/method:\s*['"]DELETE['"]/);
   assert.match(cloudSource,/rpc\/sync_app_data/);
+  assert.match(cloudSource,/syncWithoutRpc/);
+  assert.match(cloudSource,/response\.status===404/);
 });
 
 test('live sync migration merges records atomically and removes legacy snapshots',()=>{
