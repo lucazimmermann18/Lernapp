@@ -18,6 +18,10 @@ test('drops empty rows and enforces the unit limit',()=>{
  assert.equal(parseAIResponse({pairs}).length,30);
 });
 
+test('AI OCR strips IPA pronunciation even when a provider returns it',()=>{
+ assert.deepEqual(parseAIResponse({pairs:[{de:'Schwester',en:"sister ['sɪstə]"},{de:'klein',en:"little ['lɪtl]"},{de:'ein',en:'an [ən]'}]}),[['Schwester','sister'],['klein','little'],['ein','an']]);
+});
+
 test('AI OCR forwards the selected provider without exposing a key',async()=>{
  const source=await (await import('node:fs/promises')).readFile(new URL('../src/aiOcr.js',import.meta.url),'utf8');
  assert.match(source,/provider='auto'/);assert.match(source,/columnOrder,provider/);

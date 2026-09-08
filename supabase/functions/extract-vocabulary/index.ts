@@ -9,9 +9,10 @@ const cors={
 const jsonHeaders={...cors,'Content-Type':'application/json'};
 const allowedMediaTypes=['image/jpeg','image/png','image/webp'];
 const schema={type:'object',additionalProperties:false,properties:{pairs:{type:'array',maxItems:30,items:{type:'object',additionalProperties:false,properties:{de:{type:'string'},en:{type:'string'}},required:['de','en']}}},required:['pairs']};
-const sanitize=(value:any)=>({pairs:Array.isArray(value?.pairs)?value.pairs.map((pair:any)=>({de:String(pair?.de||'').trim(),en:String(pair?.en||'').trim()})).filter((pair:any)=>pair.de&&pair.en).slice(0,30):[]});
+const withoutPronunciation=(value:any)=>String(value||'').replace(/\s*\[[^\]\r\n]{1,120}\]/g,' ').replace(/\s+\/[^/\r\n]{1,120}\/\s*$/g,' ').replace(/\s+/g,' ').trim();
+const sanitize=(value:any)=>({pairs:Array.isArray(value?.pairs)?value.pairs.map((pair:any)=>({de:String(pair?.de||'').trim(),en:withoutPronunciation(pair?.en)})).filter((pair:any)=>pair.de&&pair.en).slice(0,30):[]});
 
-const promptFor=(columnOrder:string)=>`Lies aus diesem Bild ALLE sichtbaren Vokabelzeilen aus. Die Spaltenreihenfolge ist ${columnOrder==='en-de'?'Englisch links, Deutsch rechts':'Deutsch links, Englisch rechts'}. Verbinde eingerückte Folgezeilen mit dem vorherigen Eintrag. Bewahre Wortartmarker (z. B. n, v, adj, interj), Klammerhinweise und unregelmäßige Formen exakt; die App trennt diese später. Erfinde, ergänze und übersetze nichts. Gib ausschließlich das verlangte JSON zurück.`;
+const promptFor=(columnOrder:string)=>`Lies aus diesem Bild ALLE sichtbaren Vokabelzeilen aus. Die Spaltenreihenfolge ist ${columnOrder==='en-de'?'Englisch links, Deutsch rechts':'Deutsch links, Englisch rechts'}. Verbinde eingerückte Folgezeilen mit dem vorherigen Eintrag. Entferne aus dem englischen Ergebnis immer Lautschrift und Ausspracheangaben in eckigen Klammern oder Schrägstrichen, zum Beispiel ['sɪstə], [ən] oder /wɜːd/. Gib im Feld en nur die tatsächlich zu lernende Schreibweise aus. Bewahre Wortartmarker (z. B. n, v, adj, interj), Klammerhinweise und unregelmäßige Formen ansonsten exakt; die App trennt diese später. Erfinde, ergänze und übersetze nichts. Gib ausschließlich das verlangte JSON zurück.`;
 
 async function openAI(image:string,mediaType:string,prompt:string){
  const apiKey=Deno.env.get('OPENAI_API_KEY');if(!apiKey)throw new Error('Der OpenAI API-Key ist in Supabase noch nicht hinterlegt.');

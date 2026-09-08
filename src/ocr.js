@@ -12,8 +12,17 @@ const clean = value => value
 
 const PARTS_OF_SPEECH = new Set(['v','n','adj','adv','prep','pron','conj','det','interj','pl']);
 
+// Pronunciation belongs to the textbook, not to the spelling exercise.  Remove
+// trailing IPA/transcription blocks regardless of whether optional grammatical
+// annotations are kept. Examples: sister ['sɪstə], an [ən], word /wɜːd/.
+export function stripPronunciation(value) {
+  return clean(String(value || '')
+    .replace(/\s*\[[^\]\r\n]{1,120}\]/g, ' ')
+    .replace(/\s+\/[^/\r\n]{1,120}\/\s*$/g, ' '));
+}
+
 export function splitVocabularyEntry(value) {
-  let source=clean(value)
+  let source=stripPronunciation(value)
     .replace(/\s+(?:USA|UK)\s*$/i,'')
     .replace(/\s+@[a-z]{1,4}(?=\s|$)/gi,'');
   let partOfSpeech='';let notes='';let forms=[];
@@ -28,7 +37,7 @@ export function splitVocabularyEntry(value) {
 
 export function normalizeVocabularyPair([de,en],removeAnnotations=true){
   const english=splitVocabularyEntry(en);
-  return {de:clean(de),en:removeAnnotations?english.word:clean(en),partOfSpeech:english.partOfSpeech,forms:english.forms,notes:english.notes,originalEn:clean(en)};
+  return {de:clean(de),en:removeAnnotations?english.word:stripPronunciation(en),partOfSpeech:english.partOfSpeech,forms:english.forms,notes:english.notes,originalEn:clean(en)};
 }
 
 export function parseVocabularyPairs(text, order = 'de-en') {
@@ -103,5 +112,5 @@ export async function recognizeVocabulary(file, onProgress, order = 'en-de') {
   const result = await Tesseract.recognize(image, 'eng+deu', {
     logger: event => event.status === 'recognizing text' && onProgress(Math.round(event.progress * 100))
   }, {blocks: true, text: true});
-  return parseVocabularyLayout(result.data, order);
+  return parseVocabularyLayout(result.data, order).map(pair=>{const normalized=normalizeVocabularyPair(pair,true);return [normalized.de,normalized.en]});
 }

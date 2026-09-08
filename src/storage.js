@@ -1,8 +1,8 @@
 import {createId} from './id.js';
 
 const DATABASE_NAME = 'vokabelhero';
-const DATABASE_VERSION = 6;
-const STORES = ['units', 'attempts', 'rewards', 'settings', 'achievements', 'reviewProgress', 'masteryTests', 'stories', 'battleResults'];
+const DATABASE_VERSION = 8;
+const STORES = ['units', 'attempts', 'rewards', 'settings', 'achievements', 'reviewProgress', 'masteryTests', 'stories', 'battleResults', 'monsterProgress', 'runnerResults'];
 
 function requestAsPromise(request) {
   return new Promise((resolve, reject) => {
