@@ -4,12 +4,16 @@ const env = import.meta.env || {};
 const url = (env.VITE_SUPABASE_URL || 'https://lmcaduueyjpgjipoodju.supabase.co').replace(/\/$/, '');
 const anonKey = env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxtY2FkdXVleWpwZ2ppcG9vZGp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg3OTQ0NzgsImV4cCI6MjEwNDM3MDQ3OH0.scspT4gEaRJRBwmIUQXN62j5XsNpL4zLNQsiv-u3Hbs';
 const SESSION_KEY = 'vokabelhero-supabase-session';
-const TABLES = ['units','attempts','rewards','settings','achievements'];
+const TABLES = ['units','attempts','rewards','settings','achievements','reviewProgress','masteryTests','stories','battleResults'];
 const listeners = new Set();
 let syncStatus = {state:'idle',message:'Lokal gespeichert',lastSyncedAt:null};
 
 export const cloudConfigured = Boolean(url && anonKey);
 const headers = (token, extra={}) => ({apikey:anonKey,Authorization:`Bearer ${token||anonKey}`,'Content-Type':'application/json',...extra});
+// Supabase's Edge Function gateway needs both the signed-in user's JWT and the
+// public project key. Keeping this in one place prevents OCR calls from using a
+// subtly different (and browser-dependent) request configuration.
+export const getCloudRequestHeaders = (token, extra={}) => headers(token, extra);
 const readSession = () => { try{return JSON.parse(localStorage.getItem(SESSION_KEY))}catch{return null} };
 const saveSession = value => { if(value)localStorage.setItem(SESSION_KEY,JSON.stringify(value));else localStorage.removeItem(SESSION_KEY) };
 

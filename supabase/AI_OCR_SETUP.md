@@ -29,3 +29,13 @@ supabase functions deploy extract-vocabulary
 In der App kann anschließend **Automatisch**, **OpenAI (ChatGPT)** oder **Anthropic (Claude)** gewählt werden. Automatisch bevorzugt OpenAI, wenn `OPENAI_API_KEY` gesetzt ist, und verwendet andernfalls Anthropic.
 
 Für diese Erweiterung ist keine neue SQL-Migration nötig.
+
+## Persönliche Lückengeschichten deployen
+
+Die Lückengeschichten verwenden denselben serverseitigen `OPENAI_API_KEY`. Nach dem Setzen des Secrets muss zusätzlich die zweite Edge Function bereitgestellt werden:
+
+```bash
+supabase functions deploy generate-story
+```
+
+Anschließend Migration `006_stories.sql` mit `supabase db push` ausführen, damit generierte Geschichten und Ergebnisse pro Elternkonto synchronisiert werden.

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {parseVocabularyLayout, parseVocabularyPairs} from '../src/ocr.js';
+import {parseVocabularyLayout, parseVocabularyPairs, splitVocabularyEntry} from '../src/ocr.js';
 
 const word = (text, x0, y0, x1, y1) => ({text, bbox:{x0,y0,x1,y1}});
 
@@ -67,4 +67,5 @@ test('separates parts of speech, irregular forms and notes from learning words',
  assert.deepEqual(normalizeVocabularyPair(['leben, wohnen','live (in/with) v']),{de:'leben, wohnen',en:'live',partOfSpeech:'v',forms:[],notes:'in/with',originalEn:'live (in/with) v'});
  assert.equal(normalizeVocabularyPair(['Hallo','Hello. interj'],false).en,'Hello. interj');
  assert.equal(normalizeVocabularyPair(['Hallo','Hello. interj'],true).en,'Hello');
+ assert.deepEqual(splitVocabularyEntry('spell, spelt, spelt/spelled, spelled @sd v'),{word:'spell',partOfSpeech:'v',forms:['spelt','spelt/spelled','spelled'],notes:'',original:'spell, spelt, spelt/spelled, spelled @sd v'});
 });

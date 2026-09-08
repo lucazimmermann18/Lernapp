@@ -89,3 +89,10 @@ test('normalizes and loads the personalized child profile safely',async()=>{
  assert.equal(childNameFromSettings([{id:'child-profile',name:'Lina'}]),'Lina');
  assert.equal(greetingForChild('Noah',new Date('2026-09-07T08:00:00')),'Guten Morgen, Noah!');
 });
+
+test('parent analytics counts used hints separately from errors',async()=>{
+ const {buildParentAnalytics}=await import('../src/learning.js');
+ const analytics=buildParentAnalytics([{unitId:'u',word:'dog',correct:true,firstTry:false,hintUsed:2,createdAt:'2026-09-08T10:00:00Z'}],[{id:'u',name:'Unit'}]);
+ assert.equal(analytics.hintsUsed,1);
+ assert.equal(analytics.errorRate,0);
+});

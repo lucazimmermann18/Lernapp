@@ -1,4 +1,11 @@
-const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, content-type'};
+// Browsers preflight requests containing Supabase's required `apikey` header.
+// Omitting it makes fetch fail with the unhelpful message "Load failed" before
+// the function is ever invoked.
+const cors={
+ 'Access-Control-Allow-Origin':'*',
+ 'Access-Control-Allow-Headers':'apikey, authorization, content-type, x-client-info',
+ 'Access-Control-Allow-Methods':'POST, OPTIONS',
+};
 const jsonHeaders={...cors,'Content-Type':'application/json'};
 const allowedMediaTypes=['image/jpeg','image/png','image/webp'];
 const schema={type:'object',additionalProperties:false,properties:{pairs:{type:'array',maxItems:30,items:{type:'object',additionalProperties:false,properties:{de:{type:'string'},en:{type:'string'}},required:['de','en']}}},required:['pairs']};
