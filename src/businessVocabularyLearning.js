@@ -1,4 +1,7 @@
-export const BUSINESS_VOCABULARY_PROGRESS_ID = 'business-vocabulary-progress';
+export const BUSINESS_VOCABULARY_PROGRESS_PREFIX = 'business-vocabulary-progress';
+export const BUSINESS_VOCABULARY_IMPORT_PREFIX = 'business-vocabulary-import';
+export const LOCAL_BUSINESS_USER_KEY = 'local-parent';
+export const BUSINESS_VOCABULARY_PROGRESS_ID = BUSINESS_VOCABULARY_PROGRESS_PREFIX;
 export const BUSINESS_VOCABULARY_STEPS = [
   { id: 'learn', label: 'Wort lernen', status: 'learning' },
   { id: 'context', label: 'Kontext verstehen', status: 'understood' },
@@ -9,27 +12,42 @@ export const BUSINESS_VOCABULARY_STEPS = [
 const DAY = 24 * 60 * 60 * 1000;
 const VALID_STATUSES = new Set(['new', 'learning', 'understood', 'applied', 'review-due', 'mastered']);
 
+export function businessVocabularyUserKey(user) {
+  return String(user?.id || user?.email || LOCAL_BUSINESS_USER_KEY).trim() || LOCAL_BUSINESS_USER_KEY;
+}
+
+export function businessVocabularyProgressId(userKey = LOCAL_BUSINESS_USER_KEY) {
+  return userKey === LOCAL_BUSINESS_USER_KEY ? BUSINESS_VOCABULARY_PROGRESS_ID : `${BUSINESS_VOCABULARY_PROGRESS_PREFIX}:${userKey}`;
+}
+
+export function businessVocabularyImportId(userKey = LOCAL_BUSINESS_USER_KEY) {
+  return userKey === LOCAL_BUSINESS_USER_KEY ? BUSINESS_VOCABULARY_IMPORT_PREFIX : `${BUSINESS_VOCABULARY_IMPORT_PREFIX}:${userKey}`;
+}
+
 export function businessTermKey(unitId, termId) {
   return `${unitId}:${termId}`;
 }
 
-export function emptyBusinessVocabularyProgress(now = new Date()) {
+export function emptyBusinessVocabularyProgress(now = new Date(), userKey = LOCAL_BUSINESS_USER_KEY) {
   return {
-    id: BUSINESS_VOCABULARY_PROGRESS_ID,
+    id: businessVocabularyProgressId(userKey),
+    userKey,
     value: { terms: {} },
     createdAt: now.toISOString(),
     updatedAt: now.toISOString()
   };
 }
 
-export function normalizeBusinessVocabularyProgress(record, now = new Date()) {
-  const base = record && typeof record === 'object' ? record : emptyBusinessVocabularyProgress(now);
+export function normalizeBusinessVocabularyProgress(record, now = new Date(), userKey = record?.userKey || LOCAL_BUSINESS_USER_KEY) {
+  const resolvedUserKey = userKey || record?.userKey || LOCAL_BUSINESS_USER_KEY;
+  const base = record && typeof record === 'object' ? record : emptyBusinessVocabularyProgress(now, resolvedUserKey);
   const value = base.value && typeof base.value === 'object' ? base.value : {};
   const terms = value.terms && typeof value.terms === 'object' ? value.terms : {};
   const normalizedTerms = Object.fromEntries(Object.entries(terms).map(([key, progress]) => [key, normalizeTermProgress(progress, now)]));
   return {
     ...base,
-    id: BUSINESS_VOCABULARY_PROGRESS_ID,
+    id: businessVocabularyProgressId(resolvedUserKey),
+    userKey: resolvedUserKey,
     value: { ...value, terms: normalizedTerms },
     updatedAt: base.updatedAt || now.toISOString(),
     createdAt: base.createdAt || base.updatedAt || now.toISOString()
@@ -74,13 +92,13 @@ function normalizeTermProgress(progress = {}, now = new Date()) {
 }
 
 export function getBusinessTermProgress(progressRecord, unitId, termId, now = new Date()) {
-  const normalized = normalizeBusinessVocabularyProgress(progressRecord, now);
+  const normalized = normalizeBusinessVocabularyProgress(progressRecord, now, progressRecord?.userKey);
   const key = businessTermKey(unitId, termId);
   return normalized.value.terms[key] || defaultTermProgress(unitId, termId, now);
 }
 
 export function saveBusinessVocabularyStep(progressRecord, unitId, termId, stepId, options = {}, now = new Date()) {
-  const normalized = normalizeBusinessVocabularyProgress(progressRecord, now);
+  const normalized = normalizeBusinessVocabularyProgress(progressRecord, now, progressRecord?.userKey);
   const key = businessTermKey(unitId, termId);
   const current = { ...defaultTermProgress(unitId, termId, now), ...(normalized.value.terms[key] || {}) };
   const stepIndex = BUSINESS_VOCABULARY_STEPS.findIndex(step => step.id === stepId);
@@ -132,7 +150,7 @@ export function saveBusinessVocabularyStep(progressRecord, unitId, termId, stepI
 }
 
 export function resetBusinessTermProgress(progressRecord, unitId, termId, now = new Date()) {
-  const normalized = normalizeBusinessVocabularyProgress(progressRecord, now);
+  const normalized = normalizeBusinessVocabularyProgress(progressRecord, now, progressRecord?.userKey);
   const key = businessTermKey(unitId, termId);
   return {
     ...normalized,
@@ -145,7 +163,7 @@ export function resetBusinessTermProgress(progressRecord, unitId, termId, now = 
 }
 
 export function businessVocabularyLearningStats(units, progressRecord, now = new Date()) {
-  const normalized = normalizeBusinessVocabularyProgress(progressRecord, now);
+  const normalized = normalizeBusinessVocabularyProgress(progressRecord, now, progressRecord?.userKey);
   const allTerms = units.flatMap(unit => unit.terms.map(term => getBusinessTermProgress(normalized, unit.id, term.id, now)));
   return {
     total: allTerms.length,

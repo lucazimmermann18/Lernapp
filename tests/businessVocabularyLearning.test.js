@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {businessVocabularyUnits} from '../src/businessVocabulary.js';
 import {
   BUSINESS_VOCABULARY_PROGRESS_ID,
+  businessVocabularyProgressId,
+  businessVocabularyUserKey,
   businessVocabularyLearningStats,
   emptyBusinessVocabularyProgress,
   getBusinessTermProgress,
@@ -43,10 +45,13 @@ test('business vocabulary learning flow advances through all four adult learning
 test('wrong active application keeps a term due for review and reset restores new status', () => {
   const unit = businessVocabularyUnits[1];
   const term = unit.terms[3];
-  let progress = emptyBusinessVocabularyProgress(new Date('2026-09-19T10:00:00.000Z'));
+  const userKey = businessVocabularyUserKey({ id: 'parent-42', email: 'parent@example.de' });
+  let progress = emptyBusinessVocabularyProgress(new Date('2026-09-19T10:00:00.000Z'), userKey);
   progress = saveBusinessVocabularyStep(progress, unit.id, term.id, 'apply', { success: false }, new Date('2026-09-19T11:00:00.000Z'));
   const failed = getBusinessTermProgress(progress, unit.id, term.id);
-  assert.equal(progress.id, BUSINESS_VOCABULARY_PROGRESS_ID);
+  assert.equal(BUSINESS_VOCABULARY_PROGRESS_ID, 'business-vocabulary-progress');
+  assert.equal(progress.id, businessVocabularyProgressId(userKey));
+  assert.equal(progress.userKey, 'parent-42');
   assert.equal(failed.status, 'review-due');
   assert.equal(failed.step, 'apply');
   assert.equal(failed.attempts, 1);
