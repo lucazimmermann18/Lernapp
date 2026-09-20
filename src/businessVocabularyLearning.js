@@ -63,6 +63,7 @@ export function defaultTermProgress(unitId, termId, now = new Date()) {
     completedSteps: [],
     attempts: 0,
     correctApplications: 0,
+    mistakes: 0,
     reviewCount: 0,
     lastReviewedAt: null,
     nextReviewAt: null,
@@ -83,6 +84,7 @@ function normalizeTermProgress(progress = {}, now = new Date()) {
     completedSteps: Array.isArray(safe.completedSteps) ? [...new Set(safe.completedSteps.filter(id => BUSINESS_VOCABULARY_STEPS.some(stepItem => stepItem.id === id)))] : [],
     attempts: Number.isFinite(Number(safe.attempts)) ? Number(safe.attempts) : 0,
     correctApplications: Number.isFinite(Number(safe.correctApplications)) ? Number(safe.correctApplications) : 0,
+    mistakes: Number.isFinite(Number(safe.mistakes)) ? Number(safe.mistakes) : 0,
     reviewCount: Number.isFinite(Number(safe.reviewCount)) ? Number(safe.reviewCount) : 0,
     lastReviewedAt: safe.lastReviewedAt || null,
     nextReviewAt: safe.nextReviewAt || null,
@@ -108,6 +110,7 @@ export function saveBusinessVocabularyStep(progressRecord, unitId, termId, stepI
   const attempts = current.attempts + (stepId === 'apply' || stepId === 'review' ? 1 : 0);
   const correctApplications = current.correctApplications + (success && stepId === 'apply' ? 1 : 0);
   const reviewCount = current.reviewCount + (success && stepId === 'review' ? 1 : 0);
+  const mistakes = current.mistakes + (!success && (stepId === 'apply' || stepId === 'review') ? 1 : 0);
   const nextStep = success ? BUSINESS_VOCABULARY_STEPS[Math.min(stepIndex + 1, BUSINESS_VOCABULARY_STEPS.length - 1)].id : stepId;
   let status = success ? BUSINESS_VOCABULARY_STEPS[stepIndex].status : 'review-due';
   let nextReviewAt = current.nextReviewAt;
@@ -132,6 +135,7 @@ export function saveBusinessVocabularyStep(progressRecord, unitId, termId, stepI
     completedSteps,
     attempts,
     correctApplications,
+    mistakes,
     reviewCount,
     lastReviewedAt: stepId === 'review' ? now.toISOString() : current.lastReviewedAt,
     nextReviewAt,
@@ -162,14 +166,62 @@ export function resetBusinessTermProgress(progressRecord, unitId, termId, now = 
   };
 }
 
+export function businessVocabularyDueTerms(units, progressRecord, now = new Date()) {
+  const normalized = normalizeBusinessVocabularyProgress(progressRecord, now, progressRecord?.userKey);
+  return units.flatMap(unit => unit.terms.map(term => {
+    const progress = getBusinessTermProgress(normalized, unit.id, term.id, now);
+    const dueByDate = progress.nextReviewAt && new Date(progress.nextReviewAt) <= now;
+    const due = progress.nextReviewAt ? Boolean(dueByDate) : progress.status === 'review-due';
+    return { unit, term, progress, due };
+  })).filter(item => item.due).sort((a, b) => {
+    const aTime = a.progress.nextReviewAt ? new Date(a.progress.nextReviewAt).getTime() : 0;
+    const bTime = b.progress.nextReviewAt ? new Date(b.progress.nextReviewAt).getTime() : 0;
+    return aTime - bTime || b.progress.mistakes - a.progress.mistakes;
+  });
+}
+
+export function businessVocabularyDifficultTerms(units, progressRecord, now = new Date()) {
+  const normalized = normalizeBusinessVocabularyProgress(progressRecord, now, progressRecord?.userKey);
+  return units.flatMap(unit => unit.terms.map(term => {
+    const progress = getBusinessTermProgress(normalized, unit.id, term.id, now);
+    const inferredMistakes = Math.max(0, progress.attempts - progress.correctApplications - progress.reviewCount);
+    const mistakes = Math.max(progress.mistakes || 0, inferredMistakes);
+    return { unit, term, progress, mistakes };
+  })).filter(item => item.mistakes > 0).sort((a, b) => b.mistakes - a.mistakes || b.progress.attempts - a.progress.attempts || a.term.german.localeCompare(b.term.german));
+}
+
+export function businessVocabularyUnitRecommendations(units, progressRecord, now = new Date(), limit = 3) {
+  const normalized = normalizeBusinessVocabularyProgress(progressRecord, now, progressRecord?.userKey);
+  return units.map(unit => {
+    const termStates = unit.terms.map(term => getBusinessTermProgress(normalized, unit.id, term.id, now));
+    const due = termStates.filter(item => item.nextReviewAt ? new Date(item.nextReviewAt) <= now : item.status === 'review-due').length;
+    const difficult = termStates.filter(item => (item.mistakes || 0) > 0).length;
+    const mastered = termStates.filter(item => item.status === 'mastered').length;
+    const started = termStates.filter(item => item.status !== 'new').length;
+    const open = termStates.length - mastered;
+    const score = due * 5 + difficult * 3 + (started ? 2 : 0) + Math.min(open, 6) / 6;
+    let reason = 'Neue Unit starten';
+    if (due) reason = `${due} Wiederholung${due === 1 ? '' : 'en'} fällig`;
+    else if (difficult) reason = `${difficult} schwierige${difficult === 1 ? 's Wort' : ' Wörter'} festigen`;
+    else if (started && open) reason = 'Angefangene Unit abschließen';
+    return { unit, due, difficult, mastered, started, open, percent: termStates.length ? Math.round(mastered / termStates.length * 100) : 0, score, reason };
+  }).filter(item => item.open > 0).sort((a, b) => b.score - a.score || a.unit.level - b.unit.level || a.unit.number - b.unit.number).slice(0, limit);
+}
+
 export function businessVocabularyLearningStats(units, progressRecord, now = new Date()) {
   const normalized = normalizeBusinessVocabularyProgress(progressRecord, now, progressRecord?.userKey);
   const allTerms = units.flatMap(unit => unit.terms.map(term => getBusinessTermProgress(normalized, unit.id, term.id, now)));
+  const dueItems = businessVocabularyDueTerms(units, normalized, now);
+  const difficultItems = businessVocabularyDifficultTerms(units, normalized, now);
+  const mastered = allTerms.filter(item => item.status === 'mastered').length;
+  const total = allTerms.length;
   return {
-    total: allTerms.length,
+    total,
     new: allTerms.filter(item => item.status === 'new').length,
     learning: allTerms.filter(item => ['learning', 'understood', 'applied'].includes(item.status)).length,
-    due: allTerms.filter(item => item.status === 'review-due').length,
-    mastered: allTerms.filter(item => item.status === 'mastered').length
+    due: dueItems.length,
+    mastered,
+    difficult: difficultItems.length,
+    percent: total ? Math.round(mastered / total * 100) : 0
   };
 }

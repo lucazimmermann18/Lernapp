@@ -5,7 +5,10 @@ import {
   BUSINESS_VOCABULARY_PROGRESS_ID,
   businessVocabularyProgressId,
   businessVocabularyUserKey,
+  businessVocabularyDifficultTerms,
+  businessVocabularyDueTerms,
   businessVocabularyLearningStats,
+  businessVocabularyUnitRecommendations,
   emptyBusinessVocabularyProgress,
   getBusinessTermProgress,
   resetBusinessTermProgress,
@@ -60,4 +63,35 @@ test('wrong active application keeps a term due for review and reset restores ne
   const reset = getBusinessTermProgress(progress, unit.id, term.id);
   assert.equal(reset.status, 'new');
   assert.equal(reset.attempts, 0);
+});
+
+
+test('phase 4 builds daily review, difficult words and unit recommendations', () => {
+  const firstUnit = businessVocabularyUnits[0];
+  const secondUnit = businessVocabularyUnits[1];
+  const dueTerm = firstUnit.terms[0];
+  const hardTerm = firstUnit.terms[1];
+  const freshTerm = secondUnit.terms[0];
+  let progress = emptyBusinessVocabularyProgress(new Date('2026-09-19T08:00:00.000Z'), 'parent-phase-4');
+
+  progress = saveBusinessVocabularyStep(progress, firstUnit.id, dueTerm.id, 'apply', { success: true }, new Date('2026-09-19T08:00:00.000Z'));
+  progress = saveBusinessVocabularyStep(progress, firstUnit.id, hardTerm.id, 'apply', { success: false }, new Date('2026-09-19T09:00:00.000Z'));
+  progress = saveBusinessVocabularyStep(progress, secondUnit.id, freshTerm.id, 'learn', { success: true }, new Date('2026-09-19T10:00:00.000Z'));
+
+  assert.equal(businessVocabularyDueTerms(businessVocabularyUnits, progress, new Date('2026-09-19T12:00:00.000Z')).length, 1);
+  const dueTomorrow = businessVocabularyDueTerms(businessVocabularyUnits, progress, new Date('2026-09-20T08:01:00.000Z'));
+  assert.ok(dueTomorrow.some(item => item.term.id === dueTerm.id));
+
+  const difficult = businessVocabularyDifficultTerms(businessVocabularyUnits, progress, new Date('2026-09-20T08:01:00.000Z'));
+  assert.equal(difficult[0].term.id, hardTerm.id);
+  assert.equal(difficult[0].mistakes, 1);
+
+  const recommendations = businessVocabularyUnitRecommendations(businessVocabularyUnits, progress, new Date('2026-09-20T08:01:00.000Z'), 2);
+  assert.equal(recommendations[0].unit.id, firstUnit.id);
+  assert.match(recommendations[0].reason, /Wiederholung|schwierige/);
+
+  const stats = businessVocabularyLearningStats(businessVocabularyUnits, progress, new Date('2026-09-20T08:01:00.000Z'));
+  assert.equal(stats.due, 2);
+  assert.equal(stats.difficult, 1);
+  assert.equal(stats.percent, 0);
 });
