@@ -4,3 +4,5 @@ dist/
 .env.local
 .env.*.local
 
+public/business-vocabulary-units-v1.json
+supabase/seed/business_vocabulary_units_seed.sql
