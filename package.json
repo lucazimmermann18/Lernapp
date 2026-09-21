@@ -3,7 +3,9 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "business-vocabulary:generate": "node scripts/generateBusinessVocabularySeed.mjs",
+    "business-vocabulary:seed:supabase": "node scripts/seedBusinessVocabularySupabase.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
