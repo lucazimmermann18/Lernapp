@@ -1,10 +1,12 @@
 import {buildBusinessVocabularySeed} from './generateBusinessVocabularySeed.mjs';
 
 const supabaseUrl = (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://lmcaduueyjpgjipoodju.supabase.co').replace(/\/$/, '');
+const secretKey = process.env.SUPABASE_SECRET_KEY;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const apiKey = secretKey || serviceRoleKey;
 
-if (!serviceRoleKey) {
-  console.error('Missing SUPABASE_SERVICE_ROLE_KEY. Run the migration first, then start this script with the service-role key in the environment.');
+if (!apiKey) {
+  console.error('Missing Supabase server key. Set SUPABASE_SECRET_KEY (recommended) or SUPABASE_SERVICE_ROLE_KEY, then run the migration first.');
   process.exit(1);
 }
 
@@ -24,16 +26,22 @@ const rows = payload.units.map(unit => ({
 }));
 
 async function upsertChunk(chunk, index) {
+  const headers = {
+    apikey: apiKey,
+    'Content-Type': 'application/json',
+    Prefer: 'resolution=merge-duplicates'
+  };
+
+  if (!secretKey && serviceRoleKey) {
+    headers.Authorization = `Bearer ${serviceRoleKey}`;
+  }
+
   const response = await fetch(`${supabaseUrl}/rest/v1/business_vocabulary_units?on_conflict=id`, {
     method: 'POST',
-    headers: {
-      apikey: serviceRoleKey,
-      Authorization: `Bearer ${serviceRoleKey}`,
-      'Content-Type': 'application/json',
-      Prefer: 'resolution=merge-duplicates'
-    },
+    headers,
     body: JSON.stringify(chunk)
   });
+
   if (!response.ok) throw new Error(`Chunk ${index} failed (${response.status}): ${await response.text()}`);
 }
 
